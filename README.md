@@ -28,36 +28,37 @@ Sistem pengelolaan tugas E-Learning yang cerdas dengan integrasi notifikasi otom
 
 ### Use Case Diagram
 ```mermaid
-useCaseDiagram
-    actor Dosen
-    actor Mahasiswa
-    actor OpenClaw as "OpenClaw Scheduler"
-    actor Telegram as "Telegram Bot"
+flowchart TD
+    %% Actors
+    Dosen([Dosen Actor])
+    Mahasiswa([Mahasiswa Actor])
+    OpenClaw([OpenClaw Scheduler])
+    Telegram([Telegram Bot])
 
-    package "OpenClaw E-Learning System" {
-        usecase UC1 as "Login Portal"
-        usecase UC2 as "Pilih Matkul & Pertemuan"
-        usecase UC3 as "Upload Tugas (Set Deadline)"
-        usecase UC4 as "Lihat Tugas & Download Materi"
-        usecase UC5 as "Upload Jawaban Tugas"
-        usecase UC6 as "Kirim Notifikasi Instan"
-        usecase UC7 as "Kirim Reminder (H-3 s/d H0)"
-    }
+    subgraph System ["OpenClaw E-Learning System"]
+        UC1([Login Portal])
+        UC2([Pilih Matkul & Pertemuan])
+        UC3([Upload Tugas - Set Deadline])
+        UC4([Lihat Tugas & Download Materi])
+        UC5([Upload Jawaban Tugas])
+        UC6([Kirim Notifikasi Instan])
+        UC7([Kirim Reminder H-3 s/d H0])
+    end
 
-    Dosen --> UC1
-    Dosen --> UC2
-    Dosen --> UC3
+    Dosen --- UC1
+    Dosen --- UC2
+    Dosen --- UC3
     
-    UC3 ..> UC6 : <<include>>
-    UC6 --> Telegram
+    UC3 -.->|include| UC6
+    UC6 --- Telegram
 
-    Mahasiswa --> UC1
-    Mahasiswa --> UC2
-    Mahasiswa --> UC4
-    Mahasiswa --> UC5
+    Mahasiswa --- UC1
+    Mahasiswa --- UC2
+    Mahasiswa --- UC4
+    Mahasiswa --- UC5
 
-    OpenClaw --> UC7
-    UC7 --> Telegram
+    OpenClaw --- UC7
+    UC7 --- Telegram
 ```
 
 ### System Flowchart
