@@ -3,9 +3,16 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const normalizeDatabaseUrl = (databaseUrl) => {
+  if (!databaseUrl) return databaseUrl;
+
+  // Keep current secure behavior and silence pg sslmode deprecation warning.
+  return databaseUrl.replace(/sslmode=(?:prefer|require|verify-ca)\b/i, 'sslmode=verify-full');
+};
+
 async function runMigration() {
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: normalizeDatabaseUrl(process.env.DATABASE_URL),
     ssl: { rejectUnauthorized: false }
   });
 

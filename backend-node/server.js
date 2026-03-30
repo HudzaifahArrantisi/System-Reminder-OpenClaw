@@ -78,8 +78,15 @@ const escapeHTML = (value) =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
+const normalizeDatabaseUrl = (databaseUrl) => {
+  if (!databaseUrl) return databaseUrl;
+
+  // Keep current secure behavior and silence pg sslmode deprecation warning.
+  return databaseUrl.replace(/sslmode=(?:prefer|require|verify-ca)\b/i, 'sslmode=verify-full');
+};
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: normalizeDatabaseUrl(process.env.DATABASE_URL),
   ssl: { rejectUnauthorized: false }
 });
 
