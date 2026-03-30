@@ -26,6 +26,19 @@ export interface TugasItem {
   days_left?: number;
 }
 
+export interface ReminderItem extends TugasItem {
+  reminder_label: "H-3" | "H-2" | "H-1" | "H0" | null;
+  notif_sent_today: boolean;
+  h3_date: string;
+  h2_date: string;
+  h1_date: string;
+  h0_date: string;
+  h3_sent: boolean;
+  h2_sent: boolean;
+  h1_sent: boolean;
+  h0_sent: boolean;
+}
+
 export async function fetchCourses(role: string, userId: number) {
   const res = await fetch(`${API_URL}/courses?role=${role}&user_id=${userId}`);
   if (!res.ok) throw new Error("Failed to fetch courses");
@@ -62,6 +75,16 @@ export async function fetchTugas(role?: string, userId?: number) {
   const res = await fetch(`${API_URL}/tugas${suffix}`);
   if (!res.ok) throw new Error("Failed to fetch tugas");
   return res.json() as Promise<TugasItem[]>;
+}
+
+export async function fetchTugasReminders(role: string, userId: number) {
+  const params = new URLSearchParams();
+  params.set("role", role);
+  params.set("user_id", String(userId));
+
+  const res = await fetch(`${API_URL}/tugas/reminders?${params.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch reminder status");
+  return res.json() as Promise<ReminderItem[]>;
 }
 
 export async function createTugas(payload: any) {

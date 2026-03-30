@@ -11,17 +11,14 @@ import (
 	"tugas-reminder/backend/internal/repository"
 )
 
-// MatkulHandler menangani endpoint terkait mata kuliah.
 type MatkulHandler struct {
 	repo *repository.MatkulRepository
 }
 
-// NewMatkulHandler membuat instance handler baru.
 func NewMatkulHandler(repo *repository.MatkulRepository) *MatkulHandler {
 	return &MatkulHandler{repo: repo}
 }
 
-// GetAllMatkul menangani GET /api/matkul — mengambil semua mata kuliah.
 func (h *MatkulHandler) GetAllMatkul(c *gin.Context) {
 	matkulList, err := h.repo.GetAll(context.Background())
 	if err != nil {
@@ -36,7 +33,6 @@ func (h *MatkulHandler) GetAllMatkul(c *gin.Context) {
 	c.JSON(http.StatusOK, matkulList)
 }
 
-// CreateMatkul menangani POST /api/matkul — menambah mata kuliah baru.
 func (h *MatkulHandler) CreateMatkul(c *gin.Context) {
 	var req model.CreateMatkulRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

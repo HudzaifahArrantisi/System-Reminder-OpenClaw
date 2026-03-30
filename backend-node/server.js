@@ -110,9 +110,21 @@ async function ensureSubmissionTable() {
   `);
 }
 
-ensureSubmissionTable().catch((error) => {
-  console.error('Gagal menyiapkan tabel tugas_submissions:', error.message);
-});
+async function ensureNotificationLogTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notification_log (
+      id SERIAL PRIMARY KEY,
+      tugas_id INT REFERENCES tugas(id) ON DELETE CASCADE,
+      sent_at_date DATE NOT NULL,
+      UNIQUE(tugas_id, sent_at_date)
+    )
+  `);
+}
+
+async function ensureTables() {
+  await ensureSubmissionTable();
+  await ensureNotificationLogTable();
+}
 
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
@@ -232,6 +244,83 @@ app.get('/api/tugas', async (req, res) => {
         ORDER BY t.tanggal_upload DESC
       `);
     }
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get Reminder Status Tugas (Mahasiswa)
+app.get('/api/tugas/reminders', async (req, res) => {
+  const { role, user_id } = req.query;
+
+  if (!(role === 'mahasiswa' && user_id)) {
+    return res.status(400).json({ error: 'role=mahasiswa dan user_id wajib diisi' });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT
+          t.*, 
+          c.name AS course_name,
+          p.pertemuan_ke,
+          (t.deadline::date - CURRENT_DATE) AS days_left,
+          CASE (t.deadline::date - CURRENT_DATE)
+            WHEN 3 THEN 'H-3'
+            WHEN 2 THEN 'H-2'
+            WHEN 1 THEN 'H-1'
+            WHEN 0 THEN 'H0'
+            ELSE NULL
+          END AS reminder_label,
+          (t.deadline::date - INTERVAL '3 day')::date::text AS h3_date,
+          (t.deadline::date - INTERVAL '2 day')::date::text AS h2_date,
+          (t.deadline::date - INTERVAL '1 day')::date::text AS h1_date,
+          t.deadline::date::text AS h0_date,
+          EXISTS (
+            SELECT 1
+            FROM notification_log nl
+            WHERE nl.tugas_id = t.id
+              AND nl.sent_at_date = (t.deadline::date - INTERVAL '3 day')::date
+          ) AS h3_sent,
+          EXISTS (
+            SELECT 1
+            FROM notification_log nl
+            WHERE nl.tugas_id = t.id
+              AND nl.sent_at_date = (t.deadline::date - INTERVAL '2 day')::date
+          ) AS h2_sent,
+          EXISTS (
+            SELECT 1
+            FROM notification_log nl
+            WHERE nl.tugas_id = t.id
+              AND nl.sent_at_date = (t.deadline::date - INTERVAL '1 day')::date
+          ) AS h1_sent,
+          EXISTS (
+            SELECT 1
+            FROM notification_log nl
+            WHERE nl.tugas_id = t.id
+              AND nl.sent_at_date = t.deadline::date
+          ) AS h0_sent,
+          EXISTS (
+            SELECT 1
+            FROM notification_log nl
+            WHERE nl.tugas_id = t.id
+              AND nl.sent_at_date = CURRENT_DATE
+          ) AS notif_sent_today
+        FROM tugas t
+        JOIN courses c ON t.course_id = c.id
+        JOIN pertemuan p ON t.pertemuan_id = p.id
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM tugas_submissions ts
+          WHERE ts.tugas_id = t.id
+            AND ts.mahasiswa_id = $1
+        )
+        ORDER BY (t.deadline::date - CURRENT_DATE) ASC, t.deadline ASC, t.id DESC
+      `,
+      [user_id]
+    );
 
     res.json(result.rows);
   } catch (error) {
@@ -379,6 +468,17 @@ app.post('/api/tugas', async (req, res) => {
 });
 
 const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Backend Server running on port ${PORT}`);
-});
+
+async function startServer() {
+  try {
+    await ensureTables();
+    app.listen(PORT, () => {
+      console.log(`Backend Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Gagal menyiapkan tabel database:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
